@@ -1,0 +1,1 @@
+# purescript-spec-reporter-codewars
