@@ -1,0 +1,8 @@
+{
+  "name": "purescript-spec-reporter-codewars",
+  "version": "0.0.1",
+  "description": "",
+  "dependencies": {
+    "big-integer": "^1.6.41"
+  }
+}
