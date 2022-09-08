@@ -7,6 +7,7 @@
   , "debug"
   , "effect"
   , "exceptions"
+  , "foldable-traversable"
   , "maybe"
   , "prelude"
   , "profunctor-lenses"
@@ -16,6 +17,7 @@
   , "spec-discovery"
   , "spec-quickcheck"
   , "strings"
+  , "transformers"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
