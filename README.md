@@ -3,7 +3,6 @@
 ## Instructions
 
 ```shell
-npm install
 spago install
 spago build
 spago test
