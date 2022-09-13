@@ -1,51 +1,57 @@
-module Test.Spec.Reporter.Codewars
-       ( codewarsReporter
-       ) where
+module Test.Spec.Reporter.Codewars (codewarsReporter) where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.String
-  ( Pattern(Pattern)
-  , Replacement(Replacement)
-  , replaceAll
-  )
-import Effect.Console (log)
-
+import Data.String (Pattern(..), Replacement(..), replaceAll)
+import Data.Time.Duration (Milliseconds(..))
+import Effect.Exception (message, stack)
 import Test.Spec.Reporter.Base (defaultReporter)
+import Test.Spec.Result as Result
 import Test.Spec.Runner (Reporter)
+import Data.Foldable (for_)
+import Control.Monad.Writer (class MonadWriter, tell)
 import Test.Spec.Runner.Event as Event
-
 
 codewarsReporter :: Reporter
 codewarsReporter = defaultReporter {} update
   where
-    update s = case _ of
-      Event.Start _ -> pure s
-      Event.End _ -> pure s
-      Event.Suite name -> s <$ log ("\n<DESCRIBE::>" <> name)
-      Event.SuiteEnd -> s <$ log "\n<COMPLETEDIN::>"
+  update = case _ of
+    Event.Start _ -> pure unit
+    Event.End _ -> pure unit
+    Event.Suite _ex _path name -> tellLn' ("<DESCRIBE::>" <> name)
+    Event.SuiteEnd _ -> tellLn' "<COMPLETEDIN::>"
+    Event.Test _ _ _ -> pure unit
 
-      Event.Pending name -> s <$ do
-        log $ "\n<IT::>" <> name
-        log $ "\n<LOG::>Pending Test"
-        log $ "\n<COMPLETEDIN::>"
+    Event.Pending _path name ->
+      tellLns'
+        [ "<IT::>" <> name
+        , "<LOG::>Pending Test"
+        , "<COMPLETEDIN::>"
+        ]
 
-      Event.Pass name _ ms -> s <$ do
-        log $ "\n<IT::>" <> name
-        log $ "\n<PASSED::>Test Passed"
-        log $ "\n<COMPLETEDIN::>" <> (show ms)
+    Event.TestEnd _path name (Result.Success _speed (Milliseconds ms)) ->
+      tellLns'
+        [ "<IT::>" <> name
+        , "<PASSED::>Test Passed"
+        , "<COMPLETEDIN::>" <> show ms
+        ]
 
-      Event.Fail name msg mStack -> s <$ do
-        log $ "\n<IT::>" <> name
-        log $ "\n<FAILED::>Test Failed<:LF:>" <> (escapeLF msg)
-        case mStack of
-          Nothing -> pure unit
-          Just k  -> log $ "\n<LOG::-Stack Trace>" <> (escapeLF k)
-        log $ "\n<COMPLETEDIN::>"
-
-      _ -> pure s
-
+    Event.TestEnd _path name (Result.Failure error) -> do
+      tellLns'
+        [ "<IT::>" <> name
+        , "<FAILED::>Test Failed<:LF:>" <> escapeLF (message error)
+        ]
+      case stack error of
+        Nothing -> pure unit
+        Just k -> tellLn' $ "<LOG::-Stack Trace>" <> escapeLF k
+      tellLn' $ "<COMPLETEDIN::>"
 
 escapeLF :: String -> String
 escapeLF = replaceAll (Pattern "\n") (Replacement "<:LF:>")
+
+tellLn' :: forall m. MonadWriter String m => String -> m Unit
+tellLn' l = tell $ "\n" <> l <> "\n"
+
+tellLns' :: forall m. MonadWriter String m => Array String -> m Unit
+tellLns' l = for_ l $ (\x -> "\n" <> x <> "\n") >>> tell
